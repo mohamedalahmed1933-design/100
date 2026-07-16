@@ -1,23 +1,22 @@
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local player = game:GetService("Players").LocalPlayer
 
--- القيم التي تفضلها (يمكنك تعديلها)
-local LOW_CAMERA_OFFSET = Vector3.new(0, -3, 10) -- الكاميرا نازلة
-local DEFAULT_CAMERA_OFFSET = Vector3.new(0, 0, 0) -- الكاميرا طبيعية
-
-humanoid.Changed:Connect(function(property)
-    if property == "Sit" then
-        -- إذا كان اللاعب يجلس
-        if humanoid.Sit then
-            -- التأكد من أنه يجلس في سيارة (VehicleSeat)
-            if humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
-                humanoid.CameraOffset = LOW_CAMERA_OFFSET
-            end
+local function setupCamera(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    
+    -- يراقب متى تجلس وتقوم
+    humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
+        if humanoid.Sit and humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
+            -- الرقم -2.5 هو اللي ينزل الكاميرا تحت لمستوى الشنطة زي الصورة
+            humanoid.CameraOffset = Vector3.new(0, -2.5, 0)
         else
-            -- إذا نزل من السيارة، نرجع الكاميرا لوضعها الطبيعي
-            humanoid.CameraOffset = DEFAULT_CAMERA_OFFSET
+            -- يرجع الكاميرا لوضعها الطبيعي فوراً إذا نزلت
+            humanoid.CameraOffset = Vector3.new(0, 0, 0)
         end
-    end
-end)
+    end)
+end
+
+-- تشغيل السكربت أول ما تدخل اللعبة وكل ما تموت وترسبن
+if player.Character then
+    setupCamera(player.Character)
+end
+player.CharacterAdded:Connect(setupCamera)
