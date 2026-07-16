@@ -1,0 +1,20 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- هذه الدالة تراقب متى يجلس اللاعب في مقعد
+humanoid.Changed:Connect(function(property)
+    if property == "Sit" then
+        if humanoid.Sit then
+            -- التأكد من أن اللاعب يجلس في مقعد سيارة
+            if humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
+                -- هنا يتم تغيير الكاميرا بمجرد الجلوس
+                -- يمكنك تغيير رقم -2 (الارتفاع) و 12 (البعد) حسب الرؤية التي تفضلها
+                humanoid.CameraOffset = Vector3.new(0, -2, 12)
+            end
+        else
+            -- إعادة الكاميرا لوضعها الطبيعي عند النزول من السيارة
+            humanoid.CameraOffset = Vector3.new(0, 0, 0)
+        end
+    end
+end)
