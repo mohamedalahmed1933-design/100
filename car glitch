@@ -1,11 +1,23 @@
--- ضع هذا السكربت في StarterPlayerScripts كـ LocalScript
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
--- تغيير الـ CameraOffset
--- القيمة الأولى (0): يمين/يسار
--- القيمة الثانية (-3): هي المسؤولة عن إنزال الكاميرا (كلما زاد الرقم بالسالب نزلت أكثر)
--- القيمة الثالثة (10): هي بُعد الكاميرا عن السيارة
-humanoid.CameraOffset = Vector3.new(0, -3, 10)
+-- القيم التي تفضلها (يمكنك تعديلها)
+local LOW_CAMERA_OFFSET = Vector3.new(0, -3, 10) -- الكاميرا نازلة
+local DEFAULT_CAMERA_OFFSET = Vector3.new(0, 0, 0) -- الكاميرا طبيعية
+
+humanoid.Changed:Connect(function(property)
+    if property == "Sit" then
+        -- إذا كان اللاعب يجلس
+        if humanoid.Sit then
+            -- التأكد من أنه يجلس في سيارة (VehicleSeat)
+            if humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
+                humanoid.CameraOffset = LOW_CAMERA_OFFSET
+            end
+        else
+            -- إذا نزل من السيارة، نرجع الكاميرا لوضعها الطبيعي
+            humanoid.CameraOffset = DEFAULT_CAMERA_OFFSET
+        end
+    end
+end)
