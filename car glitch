@@ -1,22 +1,68 @@
-local player = game:GetService("Players").LocalPlayer
+-- تعريف المتغيرات والخدمات الأساسية
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
-local function setupCamera(character)
-    local humanoid = character:WaitForChild("Humanoid")
-    
-    -- يراقب متى تجلس وتقوم
-    humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        if humanoid.Sit and humanoid.SeatPart and humanoid.SeatPart:IsA("VehicleSeat") then
-            -- الرقم -2.5 هو اللي ينزل الكاميرا تحت لمستوى الشنطة زي الصورة
-            humanoid.CameraOffset = Vector3.new(0, -2.5, 0)
-        else
-            -- يرجع الكاميرا لوضعها الطبيعي فوراً إذا نزلت
-            humanoid.CameraOffset = Vector3.new(0, 0, 0)
+-- إنشاء واجهة المستخدم (GUI) للتحكم (تشغيل وإيقاف)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AutoClickerGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0, 140, 0, 45)
+ToggleButton.Position = UDim2.new(0, 50, 0, 50)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- لون أحمر يعني متوقف
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 16
+ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.Text = "Auto: OFF"
+ToggleButton.Parent = ScreenGui
+
+-- جعل الزر قابل للتحريك على الشاشة لتجنب إعاقة اللعب
+ToggleButton.Active = true
+ToggleButton.Draggable = true
+
+local running = false
+
+-- دالة البحث عن شريط التفاعل في واجهة اللعبة (تعدل حسب مسار الـ GUI الفعلي في لعبتك)
+local function getMinigameBar()
+    -- ملاحظة: يمكنك تعديل المسار أدناه ليطابق مسار الشريط داخل PlayerGui إذا كان ظاهراً كـ UI
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if gui:IsA("Frame") and gui.AbsoluteSize.X > 200 and gui.AbsoluteSize.Y < 50 then
+            -- تحقق مبدئي من وجود شريط عريض مشابه للصورة
+            return gui
         end
-    end)
+    end
+    return nil
 end
 
--- تشغيل السكربت أول ما تدخل اللعبة وكل ما تموت وترسبن
-if player.Character then
-    setupCamera(player.Character)
-end
-player.CharacterAdded:Connect(setupCamera)
+-- زر التفعيل والإيقاف
+ToggleButton.MouseButton1Click:Connect(function()
+    running = not running
+    if running then
+        ToggleButton.Text = "Auto: ON"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- لون أخضر يعني يعمل
+    else
+        ToggleButton.Text = "Auto: OFF"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    end
+end)
+
+-- حلقة المراقبة والتنفيذ التلقائي
+task.spawn(function()
+    while true do
+        task.wait(0.01) -- فحص سريع جداً لتفادي تفويت السهم
+        if running then
+            -- هنا يتم وضع المنطق البرمجي لقراءة موقع السهم الأبيض مقارنة بالمربع الأخضر
+            -- (غالباً في روبلوكس يتم قراءة خاصية Position الخاصة بخط المؤشر الخريطة إذا كانت UI)
+            
+            -- مثال افتراضي للتحقق من الخاصية والضغط (يمثل محاكاة الضغط الفعلي):
+            -- إذا كان السهم داخل المنطقة الخضراء يتم تنفيذ الضغط:
+            -- vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
+            -- task.wait(0.05)
+            -- vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
+        end
+    end
+end)
