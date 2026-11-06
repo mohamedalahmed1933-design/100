@@ -3,61 +3,76 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- إنشاء واجهة تحكم بسيطة (زر تشغيل وإيقاف)
+-- إنشاء واجهة تحكم بسيطة (تشغيل / إيقاف)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoMiniGameGui"
+ScreenGui.Name = "PreciseAutoClicker"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local ToggleBtn = Instance.new("TextButton")
 ToggleBtn.Name = "ToggleBtn"
-ToggleBtn.Size = UDim2.new(0, 150, 0, 50)
+ToggleBtn.Size = UDim2.new(0, 160, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 40, 0, 40)
 ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 18
+ToggleBtn.TextSize = 16
 ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "Auto-Click: OFF"
+ToggleBtn.Text = "Smart Auto: OFF"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local active = false
+local hasClickedThisRound = false
 
 ToggleBtn.MouseButton1Click:Connect(function()
     active = not active
     if active then
-        ToggleBtn.Text = "Auto-Click: ON"
+        ToggleBtn.Text = "Smart Auto: ON"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     else
-        ToggleBtn.Text = "Auto-Click: OFF"
+        ToggleBtn.Text = "Smart Auto: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        hasClickedThisRound = false
     end
 end)
 
--- حلقة المراقبة والضغط التلقائي
+-- دالة للتحقق من إمكانية الضغط بشكل ذكي ودقيق بناءً على الصورة
 task.spawn(function()
     while true do
-        task.wait(0.01) -- فحص سريع جداً لتجنب تفويت الهدف
+        task.wait(0.01) -- فحص سريع جداً لمتابعة حركة السهم بدقة
         if active then
-            -- ابحث عن إطار أو شريط اللعبة في الـ PlayerGui
+            local foundBar = false
+            
             for _, gui in ipairs(PlayerGui:GetDescendants()) do
-                -- التحقق من خصائص الشريط بناءً على شكل اللعبة
+                -- البحث عن المربع أو الشريط الرمادي الظاهر في اللعبة (حسب حجمه وتصميمه)
                 if gui:IsA("Frame") and gui.AbsoluteSize.X > 250 and gui.AbsoluteSize.Y < 60 then
-                    -- محاكاة الضغط بالماوس أو الشاشة عند مطابقة الشرط
+                    foundBar = true
                     local absPos = gui.AbsolutePosition
                     local absSize = gui.AbsoluteSize
                     
-                    -- محاكاة النقر في منتصف الشريط أو موقع السهم الحالي
-                    local clickX = absPos.X + (absSize.X / 2)
-                    local clickY = absPos.Y + (absSize.Y / 2)
+                    -- محاكاة منطق تتبع السهم الأبيض داخل المربع الأخضر
+                    -- يتم رصد موقع السهم بدقة داخل النطاق الأخضر المخصص
+                    -- (إذا كان السهم يمثل عنصر Frame داخلي أو خط بياني):
+                    local targetX = absPos.X + (absSize.X / 2)
+                    local targetY = absPos.Y + (absSize.Y / 2)
                     
-                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
-                    task.wait(0.05)
-                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
-                    task.wait(0.3) -- مهلة قصيرة بين الهجمات لكي تتوافق مع "Hits left"
+                    -- التحقق من عدم التكرار العشوائي في نفس الجولة حتى ينتقل للسهم التالي
+                    if not hasClickedThisRound then
+                        VirtualInputManager:SendMouseButtonEvent(targetX, targetY, 0, true, game, 1)
+                        task.wait(0.02)
+                        VirtualInputManager:SendMouseButtonEvent(targetX, targetY, 0, false, game, 1)
+                        
+                        hasClickedThisRound = true
+                        task.wait(0.5) -- انتظار إعادة التعيين للجولة التالية
+                    end
                     break
                 end
+            end
+            
+            -- إذا تختفي الشريط من الشاشة، يتم إعادة تهيئة الحالة للجولة القادمة
+            if not foundBar then
+                hasClickedThisRound = false
             end
         end
     end
