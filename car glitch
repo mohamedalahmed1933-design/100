@@ -3,9 +3,9 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- إنشاء واجهة تحكم بسيطة (تشغيل / إيقاف)
+-- واجهة التحكم لتشغيل وإيقاف السكربت
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PreciseAutoClicker"
+ScreenGui.Name = "PreciseClickerGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
@@ -17,63 +17,69 @@ ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ToggleBtn.TextSize = 16
 ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Text = "Smart Auto: OFF"
+ToggleBtn.Text = "Auto: OFF"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local active = false
-local canClick = true
+local hasClicked = false
 
 ToggleBtn.MouseButton1Click:Connect(function()
     active = not active
     if active then
-        ToggleBtn.Text = "Smart Auto: ON"
+        ToggleBtn.Text = "Auto: ON"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     else
-        ToggleBtn.Text = "Smart Auto: OFF"
+        ToggleBtn.Text = "Auto: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        hasClicked = false
     end
 end)
 
--- حلقة تتبع مستمرة ودقيقة
+-- حلقة المراقبة والتحقق من الإحداثيات بالبكسل
 task.spawn(function()
     while true do
-        task.wait(0.005) -- فحص فائق السرعة لمتابعة الخط الأبيض بدقة
+        task.wait(0.005) -- فحص سريع جداً لتتبع دقة الخط الأبيض
         if active then
-            local foundBar = false
+            -- استبدل الأسماء أدناه بالأسماء الفعلية للعنصر الأخضر والخط الأبيض في الـ Explorer لديك
+            -- مثال افتراضي: 
+            -- GreenTarget = المربع الأخضر
+            -- WhiteNeedle = الخط الأبيض المتحرك
             
+            -- يمكنك جعل السكربت يبحث عنهم بالنوع أو بالاسم كالتالي:
             for _, gui in ipairs(PlayerGui:GetDescendants()) do
-                -- البحث عن الإطار الرمادي الخاص بشريط الميني جيم
-                if gui:IsA("Frame") and gui.AbsoluteSize.X > 250 and gui.AbsoluteSize.Y < 60 then
-                    foundBar = true
-                    local absPos = gui.AbsolutePosition
-                    local absSize = gui.AbsoluteSize
+                if gui.Name == "WhiteNeedle" and gui:IsA("Frame") then
+                    -- سنبحث عن المربع الأخضر في نفس الـ Parent تقريباً أو عبر البحث عنه
+                    local parentFrame = gui.Parent
+                    local greenTarget = parentFrame and parentFrame:FindFirstChild("GreenTarget")
                     
-                    -- محاكاة موقع الضغط في منتصف الشريط (أو يمكنك تخصيص إحداثيات السهم بدقة)
-                    local clickX = absPos.X + (absSize.X / 2)
-                    local clickY = absPos.Y + (absSize.Y / 2)
-                    
-                    -- المنطق التلقائي المستمر لكل ضربة مطلوبة
-                    if canClick then
-                        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
-                        task.wait(0.02)
-                        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                    if greenTarget and greenTarget:IsA("Frame") then
+                        local needlePos = gui.AbsolutePosition.X
+                        local greenPos = greenTarget.AbsolutePosition.X
+                        local greenSize = greenTarget.AbsoluteSize.X
                         
-                        canClick = false
-                        -- مهلة قصيرة لمنع التكرار المفرط في نفس اللحظة حتى يستعد للضربة التالية
-                        task.spawn(function()
-                            task.wait(0.3)
-                            canClick = true
-                        end)
+                        -- التحقق هل موقع الخط الأبيض صمن حدود إحداثيات المربع الأخضر أفقيّاً؟
+                        if needlePos >= greenPos and needlePos <= (greenPos + greenSize) then
+                            if not hasClicked then
+                                local clickX = greenPos + (greenSize / 2)
+                                local clickY = greenTarget.AbsolutePosition.Y + (greenTarget.AbsoluteSize.Y / 2)
+                                
+                                -- تنفيذ النقرة فور الدخول في المنطقة الخضراء
+                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+                                task.wait(0.02)
+                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                                
+                                hasClicked = true -- لمنع التكرار حتى يخرج الخط ويعود في الجولة القادمة
+                            end
+                        else
+                            -- إعادة ضبط الحالة بمجرد خروج الخط من المنطقة الخضراء ليكون جاهزاً للفرصة القادمة
+                            if needlePos < greenPos or needlePos > (greenPos + greenSize + 10) then
+                                hasClicked = false
+                            end
+                        end
                     end
-                    break
                 end
-            end
-            
-            -- إذا انتهت الميني جيم أو اختفى الشريط، أعد السماح بالنقر فوراً
-            if not foundBar then
-                canClick = true
             end
         end
     end
