@@ -23,7 +23,7 @@ ToggleBtn.Draggable = true
 ToggleBtn.Parent = ScreenGui
 
 local active = false
-local hasClickedThisRound = false
+local canClick = true
 
 ToggleBtn.MouseButton1Click:Connect(function()
     active = not active
@@ -33,46 +33,47 @@ ToggleBtn.MouseButton1Click:Connect(function()
     else
         ToggleBtn.Text = "Smart Auto: OFF"
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        hasClickedThisRound = false
     end
 end)
 
--- دالة للتحقق من إمكانية الضغط بشكل ذكي ودقيق بناءً على الصورة
+-- حلقة تتبع مستمرة ودقيقة
 task.spawn(function()
     while true do
-        task.wait(0.01) -- فحص سريع جداً لمتابعة حركة السهم بدقة
+        task.wait(0.005) -- فحص فائق السرعة لمتابعة الخط الأبيض بدقة
         if active then
             local foundBar = false
             
             for _, gui in ipairs(PlayerGui:GetDescendants()) do
-                -- البحث عن المربع أو الشريط الرمادي الظاهر في اللعبة (حسب حجمه وتصميمه)
+                -- البحث عن الإطار الرمادي الخاص بشريط الميني جيم
                 if gui:IsA("Frame") and gui.AbsoluteSize.X > 250 and gui.AbsoluteSize.Y < 60 then
                     foundBar = true
                     local absPos = gui.AbsolutePosition
                     local absSize = gui.AbsoluteSize
                     
-                    -- محاكاة منطق تتبع السهم الأبيض داخل المربع الأخضر
-                    -- يتم رصد موقع السهم بدقة داخل النطاق الأخضر المخصص
-                    -- (إذا كان السهم يمثل عنصر Frame داخلي أو خط بياني):
-                    local targetX = absPos.X + (absSize.X / 2)
-                    local targetY = absPos.Y + (absSize.Y / 2)
+                    -- محاكاة موقع الضغط في منتصف الشريط (أو يمكنك تخصيص إحداثيات السهم بدقة)
+                    local clickX = absPos.X + (absSize.X / 2)
+                    local clickY = absPos.Y + (absSize.Y / 2)
                     
-                    -- التحقق من عدم التكرار العشوائي في نفس الجولة حتى ينتقل للسهم التالي
-                    if not hasClickedThisRound then
-                        VirtualInputManager:SendMouseButtonEvent(targetX, targetY, 0, true, game, 1)
+                    -- المنطق التلقائي المستمر لكل ضربة مطلوبة
+                    if canClick then
+                        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
                         task.wait(0.02)
-                        VirtualInputManager:SendMouseButtonEvent(targetX, targetY, 0, false, game, 1)
+                        VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
                         
-                        hasClickedThisRound = true
-                        task.wait(0.5) -- انتظار إعادة التعيين للجولة التالية
+                        canClick = false
+                        -- مهلة قصيرة لمنع التكرار المفرط في نفس اللحظة حتى يستعد للضربة التالية
+                        task.spawn(function()
+                            task.wait(0.3)
+                            canClick = true
+                        end)
                     end
                     break
                 end
             end
             
-            -- إذا تختفي الشريط من الشاشة، يتم إعادة تهيئة الحالة للجولة القادمة
+            -- إذا انتهت الميني جيم أو اختفى الشريط، أعد السماح بالنقر فوراً
             if not foundBar then
-                hasClickedThisRound = false
+                canClick = true
             end
         end
     end
