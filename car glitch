@@ -1,68 +1,64 @@
--- تعريف المتغيرات والخدمات الأساسية
 local Players = game:GetService("Players")
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- إنشاء واجهة المستخدم (GUI) للتحكم (تشغيل وإيقاف)
+-- إنشاء واجهة تحكم بسيطة (زر تشغيل وإيقاف)
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoClickerGUI"
+ScreenGui.Name = "AutoMiniGameGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Name = "ToggleButton"
-ToggleButton.Size = UDim2.new(0, 140, 0, 45)
-ToggleButton.Position = UDim2.new(0, 50, 0, 50)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- لون أحمر يعني متوقف
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 16
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.Text = "Auto: OFF"
-ToggleButton.Parent = ScreenGui
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 150, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 40, 0, 40)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 18
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "Auto-Click: OFF"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
 
--- جعل الزر قابل للتحريك على الشاشة لتجنب إعاقة اللعب
-ToggleButton.Active = true
-ToggleButton.Draggable = true
+local active = false
 
-local running = false
-
--- دالة البحث عن شريط التفاعل في واجهة اللعبة (تعدل حسب مسار الـ GUI الفعلي في لعبتك)
-local function getMinigameBar()
-    -- ملاحظة: يمكنك تعديل المسار أدناه ليطابق مسار الشريط داخل PlayerGui إذا كان ظاهراً كـ UI
-    for _, gui in ipairs(PlayerGui:GetDescendants()) do
-        if gui:IsA("Frame") and gui.AbsoluteSize.X > 200 and gui.AbsoluteSize.Y < 50 then
-            -- تحقق مبدئي من وجود شريط عريض مشابه للصورة
-            return gui
-        end
-    end
-    return nil
-end
-
--- زر التفعيل والإيقاف
-ToggleButton.MouseButton1Click:Connect(function()
-    running = not running
-    if running then
-        ToggleButton.Text = "Auto: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50) -- لون أخضر يعني يعمل
+ToggleBtn.MouseButton1Click:Connect(function()
+    active = not active
+    if active then
+        ToggleBtn.Text = "Auto-Click: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     else
-        ToggleButton.Text = "Auto: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        ToggleBtn.Text = "Auto-Click: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     end
 end)
 
--- حلقة المراقبة والتنفيذ التلقائي
+-- حلقة المراقبة والضغط التلقائي
 task.spawn(function()
     while true do
-        task.wait(0.01) -- فحص سريع جداً لتفادي تفويت السهم
-        if running then
-            -- هنا يتم وضع المنطق البرمجي لقراءة موقع السهم الأبيض مقارنة بالمربع الأخضر
-            -- (غالباً في روبلوكس يتم قراءة خاصية Position الخاصة بخط المؤشر الخريطة إذا كانت UI)
-            
-            -- مثال افتراضي للتحقق من الخاصية والضغط (يمثل محاكاة الضغط الفعلي):
-            -- إذا كان السهم داخل المنطقة الخضراء يتم تنفيذ الضغط:
-            -- vim:SendMouseButtonEvent(x, y, 0, true, game, 1)
-            -- task.wait(0.05)
-            -- vim:SendMouseButtonEvent(x, y, 0, false, game, 1)
+        task.wait(0.01) -- فحص سريع جداً لتجنب تفويت الهدف
+        if active then
+            -- ابحث عن إطار أو شريط اللعبة في الـ PlayerGui
+            for _, gui in ipairs(PlayerGui:GetDescendants()) do
+                -- التحقق من خصائص الشريط بناءً على شكل اللعبة
+                if gui:IsA("Frame") and gui.AbsoluteSize.X > 250 and gui.AbsoluteSize.Y < 60 then
+                    -- محاكاة الضغط بالماوس أو الشاشة عند مطابقة الشرط
+                    local absPos = gui.AbsolutePosition
+                    local absSize = gui.AbsoluteSize
+                    
+                    -- محاكاة النقر في منتصف الشريط أو موقع السهم الحالي
+                    local clickX = absPos.X + (absSize.X / 2)
+                    local clickY = absPos.Y + (absSize.Y / 2)
+                    
+                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+                    task.wait(0.05)
+                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                    task.wait(0.3) -- مهلة قصيرة بين الهجمات لكي تتوافق مع "Hits left"
+                    break
+                end
+            end
         end
     end
 end)
