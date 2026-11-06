@@ -1,41 +1,74 @@
-import pyautogui
-import keyboard
-import time
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
-# إحداثيات وألوان التتبع
-# ملاحظة: قم بتحديد منطقة الشاشة التي يوجد بها الشريط الرمادي والأخضر
-# اللون الأخضر الموضح في الصورة (RGB)
-TARGET_GREEN = (0, 230, 0) # درجة اللون الأخضر
-TOLERANCE = 40 # نسبة التسامح في اختلاف درجات اللون
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "PreciseClickerGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
-is_running = False
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 160, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 40, 0, 40)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.TextSize = 16
+ToggleBtn.Font = Enum.Font.SourceSansBold
+ToggleBtn.Text = "Auto: OFF"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+ToggleBtn.Parent = ScreenGui
 
-print("=== سكربت التتبع البصري الذكي ===")
-print("اضغط على الزر F6 لتشغيل / إيقاف التتبع الذكي")
-print("اضغط على الزر Esc لإغلاق البرنامج نهائياً")
+local active = false
+local hasClicked = false
 
-def is_color_match(c1, c2, tolerance):
-    return all(abs(c1[i] - c2[i]) <= tolerance for i in range(3))
+ToggleBtn.MouseButton1Click:Connect(function()
+    active = not active
+    if active then
+        ToggleBtn.Text = "Auto: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    else
+        ToggleBtn.Text = "Auto: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        hasClicked = false
+    end
+end)
 
-while True:
-    # مفتاح التشغيل والإيقاف (F6)
-    if keyboard.is_pressed('f6'):
-        is_running = not is_running
-        print(f"حالة الذكاء الاصطناعي: {'مفعل' if is_running else 'متوقف'}")
-        time.sleep(0.3)
-
-    if keyboard.is_pressed('esc'):
-        print("تم إغلاق البرنامج.")
-        break
-
-    if is_running:
-        # قراءة موقع الماوس أو المنطقة المحددة للشريط
-        x, y = pyautogui.position()
-        current_color = pyautogui.pixel(x, y)
-
-        # إذا اكتشف الذكاء الاصطناعي اللون الأخضر تحت المؤشر مباشرة
-        if is_color_match(current_color, TARGET_GREEN, TOLERANCE):
-            pyautogui.click()
-            time.sleep(0.3) # مهلة لمنع التكرار المفرط للضربة
-
-    time.sleep(0.005) # سرعة فحص عالية جداً
+task.spawn(function()
+    while true do
+        task.wait(0.005)
+        if active then
+            for _, gui in ipairs(PlayerGui:GetDescendants()) do
+                if gui.Name == "WhiteNeedle" and gui:IsA("Frame") then
+                    local parentFrame = gui.Parent
+                    local greenTarget = parentFrame and parentFrame:FindFirstChild("GreenTarget")
+                    
+                    if greenTarget and greenTarget:IsA("Frame") then
+                        local needlePos = gui.AbsolutePosition.X
+                        local greenPos = greenTarget.AbsolutePosition.X
+                        local greenSize = greenTarget.AbsoluteSize.X
+                        
+                        if needlePos >= greenPos and needlePos <= (greenPos + greenSize) then
+                            if not hasClicked then
+                                local clickX = greenPos + (greenSize / 2)
+                                local clickY = greenTarget.AbsolutePosition.Y + (greenTarget.AbsoluteSize.Y / 2)
+                                
+                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+                                task.wait(0.02)
+                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                                
+                                hasClicked = true
+                            end
+                        else
+                            if needlePos < greenPos or needlePos > (greenPos + greenSize + 10) then
+                                hasClicked = false
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
