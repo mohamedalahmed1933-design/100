@@ -41,29 +41,32 @@ task.spawn(function()
         task.wait(0.005)
         if active then
             for _, gui in ipairs(PlayerGui:GetDescendants()) do
-                if gui.Name == "WhiteNeedle" and gui:IsA("Frame") then
-                    local parentFrame = gui.Parent
-                    local greenTarget = parentFrame and parentFrame:FindFirstChild("GreenTarget")
+                if gui:IsA("Frame") and gui.AbsoluteSize.X > 250 and gui.AbsoluteSize.Y < 60 then
+                    local barPos = gui.AbsolutePosition.X
+                    local barSize = gui.AbsoluteSize.X
                     
-                    if greenTarget and greenTarget:IsA("Frame") then
-                        local needlePos = gui.AbsolutePosition.X
-                        local greenPos = greenTarget.AbsolutePosition.X
-                        local greenSize = greenTarget.AbsoluteSize.X
-                        
-                        if needlePos >= greenPos and needlePos <= (greenPos + greenSize) then
-                            if not hasClicked then
-                                local clickX = greenPos + (greenSize / 2)
-                                local clickY = greenTarget.AbsolutePosition.Y + (greenTarget.AbsoluteSize.Y / 2)
-                                
-                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
-                                task.wait(0.02)
-                                VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
-                                
-                                hasClicked = true
-                            end
-                        else
-                            if needlePos < greenPos or needlePos > (greenPos + greenSize + 10) then
-                                hasClicked = false
+                    for _, sub in ipairs(gui:GetDescendants()) do
+                        if sub:IsA("Frame") and sub.AbsoluteSize.X < 15 and sub.AbsoluteSize.Y >= gui.AbsoluteSize.Y - 10 then
+                            local needlePos = sub.AbsolutePosition.X
+                            
+                            local greenStart = barPos + (barSize * 0.4)
+                            local greenEnd = barPos + (barSize * 0.7)
+                            
+                            if needlePos >= greenStart and needlePos <= greenEnd then
+                                if not hasClicked then
+                                    local clickX = barPos + (barSize / 2)
+                                    local clickY = gui.AbsolutePosition.Y + (gui.AbsoluteSize.Y / 2)
+                                    
+                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+                                    task.wait(0.02)
+                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                                    
+                                    hasClicked = true
+                                end
+                            else
+                                if needlePos < greenStart - 10 or needlePos > greenEnd + 10 then
+                                    hasClicked = false
+                                end
                             end
                         end
                     end
